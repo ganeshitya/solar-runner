@@ -1,6 +1,10 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// Set canvas dimensions
+canvas.width = 400; // You can adjust these values
+canvas.height = 480; // You can adjust these values
+
 let gameSpeed = 1;
 let gravity = 0.3;
 let score = 0;
