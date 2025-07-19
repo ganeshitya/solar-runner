@@ -1,8 +1,8 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-let gameSpeed = 2;
 let gravity = 0.5;
+let gameSpeed = 2;
 let score = 0;
 let sunTime = 60;
 let gameOver = false;
@@ -14,109 +14,97 @@ let robot = {
   width: 40,
   height: 40,
   vy: 0,
-  isJumping: false
+  isJumping: false,
+  isPlacingPanel: false
 };
 
-// Rooftops Array
-let rooftops = [
-  { x: 0, y: 340, width: 200, height: 60 },
-  { x: 300, y: 340, width: 150, height: 60 },
-  { x: 550, y: 340, width: 250, height: 60 }
+// Platforms (Rooftops)
+let platforms = [
+  { x: 0, y: 340, width: 200, height: 60 }
 ];
 
 // Panels
 let panels = [];
 
-// Obstacles Array
-let obstacles = [
-  { x: 400, y: 310, width: 30, height: 30 }
-];
-
-// Timer
+// Sunlight Timer
 let sunTimer = setInterval(() => {
   sunTime--;
   if (sunTime <= 0) {
     gameOver = true;
     clearInterval(sunTimer);
     setTimeout(() => {
-      alert(`Game Over! You scored ${score} points!`);
+      alert(`Sunset! Your score: ${score}`);
       location.reload();
     }, 100);
   }
 }, 1000);
 
-// Key Events
+// Controls
 document.addEventListener('keydown', e => {
-  if (e.code === 'Space') {
-    // Check if robot is on a rooftop
-    let onRoof = rooftops.some(roof =>
-      robot.x + robot.width > roof.x &&
-      robot.x < roof.x + roof.width
-    );
-    if (onRoof) {
-      panels.push({ x: robot.x + 50, y: robot.y + robot.height - 10 });
-      score += 10;
-    }
-  }
   if (e.code === 'ArrowUp' && !robot.isJumping) {
-    robot.vy = -10;
+    robot.vy = -12;
     robot.isJumping = true;
+  }
+  if (e.code === 'Space' && robot.isJumping && !robot.isPlacingPanel) {
+    // Place Panel in front of robot, aligned with next platform if exists
+    let nextPlatform = platforms.find(p => p.x > robot.x);
+    if (nextPlatform) {
+      panels.push({ x: nextPlatform.x + 10, y: nextPlatform.y - 10 });
+      score += 20;
+      robot.isPlacingPanel = true;
+    }
   }
 });
 
 function update() {
-  // Gravity
+  // Gravity & Jump Physics
   robot.y += robot.vy;
   robot.vy += gravity;
 
-  if (robot.y >= 300) {
-    robot.y = 300;
+  // Ground Collision (Platform Check)
+  let onPlatform = platforms.some(p =>
+    robot.x + robot.width > p.x &&
+    robot.x < p.x + p.width &&
+    robot.y + robot.height >= p.y &&
+    robot.y + robot.height <= p.y + 10
+  );
+
+  if (onPlatform) {
+    robot.y = platforms.find(p => 
+      robot.x + robot.width > p.x &&
+      robot.x < p.x + p.width
+    ).y - robot.height;
     robot.vy = 0;
     robot.isJumping = false;
+    robot.isPlacingPanel = false;
+  } else if (robot.y > canvas.height) {
+    gameOver = true;
+    clearInterval(sunTimer);
+    setTimeout(() => {
+      alert(`You fell! Final Score: ${score}`);
+      location.reload();
+    }, 100);
   }
 
-  // Move rooftops
-  rooftops.forEach(roof => roof.x -= gameSpeed);
-  if (rooftops[0].x + rooftops[0].width < 0) {
-    rooftops.shift();
-    rooftops.push({
-      x: 800,
+  // Move Platforms & Panels
+  platforms.forEach(p => p.x -= gameSpeed);
+  panels.forEach(panel => panel.x -= gameSpeed);
+
+  // Remove off-screen platforms and panels
+  platforms = platforms.filter(p => p.x + p.width > -50);
+  panels = panels.filter(panel => panel.x > -50);
+
+  // Generate new platforms with manageable gaps
+  if (platforms[platforms.length - 1].x + platforms[platforms.length - 1].width < 600) {
+    let width = 150 + Math.random() * 100;
+    let gap = 100 + Math.random() * 50; // Manageable gap
+    platforms.push({
+      x: platforms[platforms.length - 1].x + platforms[platforms.length - 1].width + gap,
       y: 340,
-      width: 150 + Math.random() * 100,
+      width: width,
       height: 60
     });
   }
-
-  // Move panels
-  panels.forEach(panel => panel.x -= gameSpeed);
-
-  // Move obstacles
-  obstacles.forEach(obs => obs.x -= gameSpeed);
-  if (obstacles[0].x + obstacles[0].width < 0) {
-    obstacles.shift();
-    obstacles.push({
-      x: 800,
-      y: 310,
-      width: 30,
-      height: 30
-    });
-  }
-
-  // Collision detection with obstacles
-  obstacles.forEach(obs => {
-    if (
-      robot.x < obs.x + obs.width &&
-      robot.x + robot.width > obs.x &&
-      robot.y + robot.height > obs.y
-    ) {
-      gameOver = true;
-      clearInterval(sunTimer);
-      setTimeout(() => {
-        alert(`You hit an obstacle! Final Score: ${score}`);
-        location.reload();
-      }, 100);
-    }
-  });
 }
 
 function draw() {
@@ -126,17 +114,13 @@ function draw() {
   ctx.fillStyle = '#d0eaff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Rooftops
+  // Platforms
   ctx.fillStyle = 'gray';
-  rooftops.forEach(roof => ctx.fillRect(roof.x, roof.y, roof.width, roof.height));
+  platforms.forEach(p => ctx.fillRect(p.x, p.y, p.width, p.height));
 
   // Panels
   ctx.fillStyle = 'orange';
   panels.forEach(panel => ctx.fillRect(panel.x, panel.y, 30, 10));
-
-  // Obstacles
-  ctx.fillStyle = 'red';
-  obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.width, obs.height));
 
   // Robot
   ctx.fillStyle = 'blue';
