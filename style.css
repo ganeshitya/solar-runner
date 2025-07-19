@@ -1,0 +1,15 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: linear-gradient(#f0f0f0, #d0eaff);
+}
+canvas {
+  border: 2px solid #333;
+  background: white;
+  display: block;
+  margin: 10px auto;
+}
+h1 {
+  margin-top: 20px;
+}
